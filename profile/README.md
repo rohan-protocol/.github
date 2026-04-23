@@ -1,4 +1,4 @@
-<h1 align="center">Project Rohan 🛡️ (@rohan-zk/sdk)</h1>
+<h1 align="center">Project Rohan 🛡️ (@rohan-protocol/sdk)</h1>
 
 <p align="center">
   <b>The Universal Trust Layer for AI Agents.</b><br>
@@ -45,7 +45,7 @@ npm install @rohan-zk/sdk
 ## Quickstart
 
 ```typescript
-import { RohanNode } from '@rohan-zk/sdk';
+import { RohanNode } from '@rohan-protocol/sdk';
 
 // 1. Create an agent connected to the Relayer (No Wallets required!)
 const agent = new RohanNode({
@@ -84,7 +84,7 @@ console.log(result.onChainCommitment); // "ca5ab9c2..."
 Turn your standard LLM into an autonomous Web3 protocol user. We provide a drop-in LangChain `Tool` wrapper. Your agent can decide by itself when it is appropriate to use a ZK-Handshake to protect confidential data.
 
 ```typescript
-import { RohanSecureHandshakeTool } from '@rohan-zk/sdk';
+import { RohanSecureHandshakeTool } from '@rohan-protocol/sdk';
 
 // Inject the Tool into LangChain/LangGraph
 const handshakeTool = new RohanSecureHandshakeTool(agent);
@@ -134,7 +134,7 @@ Generates a Zero-Knowledge Proof locally and relays it via the Gas Station API.
 
 Project Rohan is currently maintained by the core creator (@jvonb) and automated CI/CD systems (@rohan-ops). We are now opening the protocol for community governance.
 
-The first 5 developers to merge significant PRs (especially for ElizaOS/CrewAI Python sidecars) will be invited to the @rohan-zk GitHub organization as core team members.
+The first 5 developers to merge significant PRs (especially for ElizaOS/CrewAI Python sidecars) will be invited to the @rohan-protocol GitHub organization as core team members.
 
 Check our open issues to get started!
 <p align="center">
