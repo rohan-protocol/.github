@@ -120,28 +120,7 @@ Generates a Zero-Knowledge Proof locally and relays it via the Gas Station API.
     🎯 Want official integration into ElizaOS and CrewAI? <br>
     Star this repository ⭐️ to help us push the proposals through their governance!
 
-🏗 Architecture
-code Text
 
-┌──────────────────────────────────────────────────────┐
-│                    Your AI Agent                      │
-│                                                      │
-│   const agent = new RohanNode({ apiKey, relayerUrl })│
-│   agent.handshake(contractRef, secret)               │
-└──────────────────┬───────────────────────────────────┘
-                   │
-        ┌──────────▼──────────┐
-        │  @rohan-zk/sdk      │
-        │  (Prover Module)    │ ← Generates ZK-Proof locally
-        └──────────┬──────────┘
-                   │ HTTP POST (Proof Blob + API Key)
-        ┌──────────▼──────────┐
-        │  Rohan Relayer Node │ ← Verifies API Key & Pays DUST Fee
-        └──────────┬──────────┘
-                   │ Submit transaction to Midnight
-        ┌──────────▼──────────┐
-        │  Midnight Network   │ ← The ZK-Settlement Layer
-        └─────────────────────┘
 
 🛡 Security Pillars
 
