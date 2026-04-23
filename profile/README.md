@@ -30,22 +30,27 @@ Rohan enables agents to negotiate confidential deals (NDAs, payments, secrets) u
 
 ---
 
-## 📦 Install
+## What is this?
+
+Rohan enables AI agents to negotiate confidential deals (NDAs, payments, secrets) with each other using **Zero-Knowledge Proofs (zk-SNARKs)** on the Midnight Blockchain. The actual deal content never leaves your server. Only an encrypted cryptographic commitment lands on-chain.
+
+With **SDK v0.3.1**, we refined the **"Gas Station / Relayer"** architecture (Stripe-DX). You no longer need to manage DUST-Token balances, blockchain wallets, or complex cryptography. You simply provide an API Key, and our Relayer pays the gas fees and manages the chain interactions for your agent.
+
+## Install
 
 ```bash
 npm install @rohan-zk/sdk
+```
 
-🚀 Quickstart (The Stripe-DX)
+## Quickstart
 
-You no longer need to manage DUST-Token balances or complex cryptography. You simply provide an API Key, and our Relayer pays the gas fees and manages the chain interactions for your agent.
-code TypeScript
-
+```typescript
 import { RohanNode } from '@rohan-zk/sdk';
 
 // 1. Create an agent connected to the Relayer (No Wallets required!)
 const agent = new RohanNode({
   apiKey: process.env.ROHAN_API_KEY || 'rohan_sk_test',
-  relayerUrl: 'http://relayer.rohan.network:4005'
+  relayerUrl: 'https://api.rohanprotocol.network'
 });
 
 // 2. Listen for incoming deals (Trustless Verification via Network Ledger)
@@ -56,27 +61,30 @@ agent.onHandshake((deal) => {
 
 // 3. Connect to the Blockchain Tracker
 await agent.start();
+```
 
-🔐 Send a Confidential Handshake
+## Send a Confidential Handshake
 
-Prompt your agent to execute a confidential data transfer utilizing our local ZK Proof flow:
-code TypeScript
+You can prompt your agent to execute a confidential data transfer utilizing our ZK Proof flow:
 
+```typescript
 const result = await agent.handshake(
-  '02d7fe8b22a0142b6a958e945feae6759c8d504533a69aa3fe6a8f6f5cc761b0', // Target Contract Address
-  'NDA for Project Alpha – Confidential Blueprints', // Secret data (remains offline)
-  150  // Maut/Toll fee
+  'did:rohan:partner_agent',           // Target DID (or raw Contract Address)
+  { nda: 'Project Alpha', blueprints: true }, // Secret data (remains offline, auto-stringified)
+  150  // Toll fee in DUST
 );
 
 console.log(result.status);            // "success"
 console.log(result.txId);              // "tx_mid_892f7dbf..."
+console.log(result.onChainCommitment); // "ca5ab9c2..."
+```
 
-🤖 LangChain Integration (God Mode)
+## 🤖 LangChain Integration (God Mode)
 
-Turn your standard LLM into an autonomous Web3 protocol user. We provide a drop-in LangChain Tool wrapper. Your agent can decide by itself when it is appropriate to use a ZK-Handshake to protect confidential data.
-code TypeScript
+Turn your standard LLM into an autonomous Web3 protocol user. We provide a drop-in LangChain `Tool` wrapper. Your agent can decide by itself when it is appropriate to use a ZK-Handshake to protect confidential data.
 
-import { RohanSecureHandshakeTool } from '@rohan-zk/sdk/langchain';
+```typescript
+import { RohanSecureHandshakeTool } from '@rohan-zk/sdk';
 
 // Inject the Tool into LangChain/LangGraph
 const handshakeTool = new RohanSecureHandshakeTool(agent);
@@ -84,6 +92,30 @@ const tools = [handshakeTool, /* other system tools */];
 
 // The LLM will now autonomously construct the ZK-Handshake payload 
 // when its system prompt instructs it to securely transmit money or data.
+```
+
+## API Reference
+
+### `new RohanNode(config)`
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `apiKey` | `string` | ✅ | – | API key for the Gas Station / Relayer |
+| `relayerUrl` | `string` | ✅ | – | The URL of the Rohan Gas Station |
+| `did` | `string` | ❌ | Auto-generated| Decentralized Identifier for this node |
+
+### `agent.start(): Promise<void>`
+Initializes the Ledger Poller. It watches the Midnight Blockchain for status updates relevant to this node.
+
+### `agent.onHandshake(callback): void`
+Fires automatically when a cryptographic ZK-Proof addressed to this agent is successfully verified on the Midnight Ledger.
+
+### `agent.handshake(targetIdentifier, dealPayload, fee): Promise<HandshakeResult>`
+Generates a Zero-Knowledge Proof locally and relays it via the Gas Station API.
+- **targetIdentifier**: A DID (`did:rohan:...`) or a raw Midnight Contract Address. DIDs are resolved automatically.
+- **dealPayload**: `string | object` — The confidential data you are masking. Objects are auto-stringified.
+- **fee**: Toll fee in DUST (default: `150`, minimum: `100`).
+
 
     🎯 Want official integration into ElizaOS and CrewAI? <br>
     Star this repository ⭐️ to help us push the proposals through their governance!
