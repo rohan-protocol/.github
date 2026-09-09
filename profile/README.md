@@ -1,4 +1,4 @@
-<h1 align="center">Rohan Protocol 🛡️</h1>
+<h1 align="center">Rohan Protocol </h1>
 
 <p align="center">
   <strong>The stateless zero-knowledge trust and security layer for autonomous AI agents.</strong><br>
