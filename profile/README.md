@@ -1,4 +1,4 @@
-<h1 align="center">Rohan Protocol </h1>
+<h1 align="center">Rohan Protocol</h1>
 
 <p align="center">
   <strong>The stateless zero-knowledge trust and security layer for autonomous AI agents.</strong><br>
@@ -26,7 +26,6 @@
 - [Universal MCP setup](#universal-mcp-client-setup)
 - [SDK quickstart](#developer-quickstart-nodejstypescript-sdk)
 - [Streamable HTTP lifecycle](#streamable-http-ndjson-lifecycle)
-- [Benchmarks](#empirical-benchmarks)
 - [Threat register](#formal-threat-and-mitigation-register)
 - [Live settlement infrastructure](#live-settlement-infrastructure)
 - [Academic citation](#academic-citation)
@@ -85,8 +84,8 @@ Rohan shifts the security perimeter from network firewalls to **stateless, clien
 
 | Package | Version | Architectural role | Target runtime |
 | --- | --- | --- | --- |
-| [`@rohan-protocol/sdk`](https://www.npmjs.com/package/@rohan-protocol/sdk) | `v0.5.0` | Core cryptographic proving engine, Poseidon hashing, and Streamable Relayer Client | Node.js, Deno, Bun |
-| [`@rohan-protocol/mcp`](https://www.npmjs.com/package/@rohan-protocol/mcp) | `v0.5.0` | MCP server with Pre-Prover Semantic Firewall (V-01) | Claude Desktop, Cursor, CLI bots |
+| [`@rohan-protocol/sdk`](https://www.npmjs.com/package/@rohan-protocol/sdk) | `v0.5.0` | Core cryptographic proving engine, Poseidon/SHA-256 commitment hashing, and Streamable Relayer Client | Node.js, Deno, Bun |
+| [`@rohan-protocol/mcp`](https://www.npmjs.com/package/@rohan-protocol/mcp) | `v0.5.0` | MCP server with Pre-Prover Semantic Firewall (V-01) | Claude Desktop, Cursor, Google ADK, CLI bots |
 | [`@rohan-protocol/webmcp`](https://www.npmjs.com/package/@rohan-protocol/webmcp) | `v0.5.0` | Browser-native WebMCP shield with DOM defense (V-07) and WebWorker proving | React 18/19, Next.js, browser extensions |
 
 ## Universal MCP client setup
@@ -168,7 +167,7 @@ Generate a proof in memory and submit it to the relayer with live Streamable HTT
 import { RohanProver, RohanRelayerClient } from "@rohan-protocol/sdk";
 
 const relayer = new RohanRelayerClient({
-  relayerUrl: "https://api.rohanprotocol.network",
+  relayerUrl: "https://api.rohanprotocol.network", 
   contractAddress: "6d2d603235f996424d76c85186a79cc403245ea8ee1ba9087e40967fe71bdc4d"
 });
 
@@ -211,17 +210,9 @@ The SDK processes chunked transfers from `POST /api/v1/handshake/stream`:
 | `subsidizing_gas` | `{"stage":"subsidizing_gas","gasPayer":"rohan-relayer-node-01"}` | Paymaster sponsors transaction fees ($tDUST) |
 | `confirmed` | `{"stage":"confirmed","status":"success","txHash":"0x7c92...","intentHash":"0916..."}` | Transaction is verified and anchored to Midnight Preprod |
 
-## Empirical benchmarks
 
-Benchmarked while executing the `verify_batched_handshakes` circuit:
 
-| Hardware tier | Proof time (`Tprove`) | Peak memory (`Mfootprint`) | Proof payload |
-| --- | ---: | ---: | ---: |
-| Intel Core i9-13900K (desktop) | 315 ± 12 ms | 41.8 MB | ≈580 bytes |
-| Apple M3 Pro (laptop / worker) | 465 ± 18 ms | 43.2 MB | ≈580 bytes |
-| ARM Cortex-A76 (Raspberry Pi 5) | 1180 ± 65 ms | 46.5 MB | ≈580 bytes |
 
-**Serverless scalability:** In comparative 24-hour benchmarks, Streamable HTTP allowed Google Cloud Run containers to scale to zero within 120 seconds of idle time, reducing cold-start compute costs by over 94% compared with persistent Server-Sent Events (SSE).
 
 ## Formal threat and mitigation register
 
@@ -256,4 +247,5 @@ If you integrate Rohan Protocol, its WASI Preview 2 prover components, or the St
 ## License
 
 MIT © Rohan Protocol. Built for the autonomous agentic economy on Midnight.
+
 
