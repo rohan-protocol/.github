@@ -26,6 +26,7 @@
 - [Universal MCP setup](#universal-mcp-client-setup)
 - [SDK quickstart](#developer-quickstart-nodejstypescript-sdk)
 - [Streamable HTTP lifecycle](#streamable-http-ndjson-lifecycle)
+- [Hosted Relayer Infrastructure](#hosted-relayer-infrastructure--access-tiers)
 - [Threat register](#formal-threat-and-mitigation-register)
 - [Live settlement infrastructure](#live-settlement-infrastructure)
 - [Academic citation](#academic-citation)
@@ -104,7 +105,8 @@ Add the following to `claude_desktop_config.json`. See the [official configurati
       "args": ["-y", "@rohan-protocol/mcp"],
       "env": {
         "ROHAN_CONTRACT_ADDRESS": "6d2d603235f996424d76c85186a79cc403245ea8ee1ba9087e40967fe71bdc4d",
-        "ROHAN_RELAYER_URL": "https://api.rohanprotocol.network/api/v1/handshake/stream"
+        "ROHAN_RELAYER_URL": "https://api.rohanprotocol.network/api/v1/handshake/stream",
+        "ROHAN_API_KEY": "rohan_live_..."
       }
     }
   }
@@ -167,8 +169,9 @@ Generate a proof in memory and submit it to the relayer with live Streamable HTT
 import { RohanProver, RohanRelayerClient } from "@rohan-protocol/sdk";
 
 const relayer = new RohanRelayerClient({
-  relayerUrl: "https://api.rohanprotocol.network", 
-  contractAddress: "6d2d603235f996424d76c85186a79cc403245ea8ee1ba9087e40967fe71bdc4d"
+  relayerUrl: "https://api.rohanprotocol.network",
+  contractAddress: "6d2d603235f996424d76c85186a79cc403245ea8ee1ba9087e40967fe71bdc4d",
+  apiKey: process.env.ROHAN_API_KEY // Optional: Defaults to 10 tx/day free sandbox
 });
 
 const prover = new RohanProver();
@@ -203,16 +206,25 @@ const receipt = await relayer.submitProofStream(proofData, (event) => {
 
 The SDK processes chunked transfers from `POST /api/v1/handshake/stream`:
 
-| Stage | Example NDJSON payload | Description |
-| --- | --- | --- |
-| `received` | `{"stage":"received","timestamp":1788903808207}` | Relayer gateway confirms proof ingress |
-| `firewall_approved` | `{"stage":"firewall_approved","v01":"passed"}` | Pre-Prover Firewall verifies policy constraints |
-| `subsidizing_gas` | `{"stage":"subsidizing_gas","gasPayer":"rohan-relayer-node-01"}` | Paymaster sponsors transaction fees ($tDUST) |
-| `confirmed` | `{"stage":"confirmed","status":"success","txHash":"0x7c92...","intentHash":"0916..."}` | Transaction is verified and anchored to Midnight Preprod |
+| Stage               | Example NDJSON payload                                                                 | Description                                               |
 
+| `received`          | `{"stage":"received","timestamp":1788903808207}`                                       | Relayer gateway confirms proof ingress                    |
+| `firewall_approved` | `{"stage":"firewall_approved","v01":"passed"}`                                         | Pre-Prover Firewall verifies policy constraints           |
+| `subsidizing_gas`   | `{"stage":"subsidizing_gas","gasPayer":"rohan-relayer-node-01"}`                       | Paymaster sponsors transaction fees ($tDUST)              |
+| `confirmed`         | `{"stage":"confirmed","status":"success","txHash":"0x7c92...","intentHash":"0916..."}` | Transaction is verified and anchored to Midnight Preprod  |
 
+## Hosted Relayer Infrastructure & Access Tiers
 
+The core ZK proving engine (`@rohan-protocol/sdk`) is 100% open-source and executes locally in client RAM at zero cost. To anchor handshakes on-chain without managing Midnight wallets or $tDUST gas, clients connect to the **Rohan Relayer Gateway**:
 
+| Tier           | Monthly Rate | Handshakes / Month | Midnight Gas ($tDUST) | Rate Limit       | Access Model                           |
+
+| **Sandbox**    | Free         | 10 / day           | 100% Sponsored        | 1 Req / 10s      | Built-in SDK default (No key required) |
+| **Developer**  | $0           | 500 / month        | 100% Sponsored        | 1 Req / sec      | Free staging key via portal            |
+| **Pro Agent**  | $49 / mo     | 25,000 / month     | 100% Sponsored        | High-speed pool  | Direct access (`rohan_live_...`)       |
+| **Scale**      | $199 / mo    | 125,000 / month    | 100% Sponsored        | Priority pool    | High-throughput agent swarms           |
+
+> **Gas Sponsoring**: Rohan sponsors 100% of L1 network execution fees on Midnight Preprod through an automated paymaster. Get production keys at [rohanprotocol.network](https://rohanprotocol.network).
 
 ## Formal threat and mitigation register
 
@@ -247,5 +259,7 @@ If you integrate Rohan Protocol, its WASI Preview 2 prover components, or the St
 ## License
 
 MIT © Rohan Protocol. Built for the autonomous agentic economy on Midnight.
+
+
 
 
