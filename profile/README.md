@@ -15,8 +15,8 @@
 </p>
 
 > **Foundational research paper**  
-> [*Rohan: A Stateless Zero-Knowledge Trust Gateway for Privacy-Preserving Agentic Workflows via Streamable HTTP*](https://github.com/rohan-protocol/sdk/blob/main/WHITEPAPER.md)  
-> By Julian von Bordelius ([ORCID 0009-0005-2436-0988](https://orcid.org/0009-0005-2436-0988)) — Model Context Protocol Working Group & Rohan Protocol Lab.
+> [*Rohan: A Stateless Zero-Knowledge Trust Gateway for Privacy-Preserving Agentic Workflows via Streamable HTTP*](https://zenodo.org/records/22730240)  
+> Model Context Protocol Working Group & Rohan Protocol Lab.
 
 ## Table of Contents
 
@@ -24,9 +24,9 @@
 - [Architecture](#architecture-the-rohan-trinity)
 - [Ecosystem packages](#ecosystem-packages)
 - [Universal MCP setup](#universal-mcp-client-setup)
-- [SDK quickstart](#developer-quickstart-nodejstypescript-sdk)
+- [SDK quickstart](#developer-quickstart-nodejs-and-typescript-sdk)
 - [Streamable HTTP lifecycle](#streamable-http-ndjson-lifecycle)
-- [Hosted Relayer Infrastructure](#hosted-relayer-infrastructure--access-tiers)
+- [Hosted Relayer Infrastructure](#hosted-relayer-infrastructure-and-access-tiers)
 - [Threat register](#formal-threat-and-mitigation-register)
 - [Live settlement infrastructure](#live-settlement-infrastructure)
 - [Academic citation](#academic-citation)
@@ -83,11 +83,11 @@ Rohan shifts the security perimeter from network firewalls to **stateless, clien
 
 ## Ecosystem packages
 
-| Package | Version | Architectural role | Target runtime |
-| --- | --- | --- | --- |
-| [`@rohan-protocol/sdk`](https://www.npmjs.com/package/@rohan-protocol/sdk) | `v0.5.0` | Core cryptographic proving engine, Poseidon/SHA-256 commitment hashing, and Streamable Relayer Client | Node.js, Deno, Bun |
-| [`@rohan-protocol/mcp`](https://www.npmjs.com/package/@rohan-protocol/mcp) | `v0.5.0` | MCP server with Pre-Prover Semantic Firewall (V-01) | Claude Desktop, Cursor, Google ADK, CLI bots |
-| [`@rohan-protocol/webmcp`](https://www.npmjs.com/package/@rohan-protocol/webmcp) | `v0.5.0` | Browser-native WebMCP shield with DOM defense (V-07) and WebWorker proving | React 18/19, Next.js, browser extensions |
+| Package | Version | Role | Runtime |
+| :--- | :---: | :--- | :--- |
+| [`@rohan-protocol/sdk`](https://www.npmjs.com/package/@rohan-protocol/sdk) | `v0.5.0` | ZK proving engine, Poseidon/SHA-256 commitments, and relayer client | Node.js, Deno, Bun |
+| [`@rohan-protocol/mcp`](https://www.npmjs.com/package/@rohan-protocol/mcp) | `v0.5.0` | MCP server with Pre-Prover Semantic Firewall (V-01) | Claude, Cursor, Google ADK, CLI |
+| [`@rohan-protocol/webmcp`](https://www.npmjs.com/package/@rohan-protocol/webmcp) | `v0.5.0` | Browser WebMCP shield with DOM defense (V-07) and WebWorker proving | React, Next.js, extensions |
 
 ## Universal MCP client setup
 
@@ -155,7 +155,7 @@ Once connected, agents can negotiate and anchor handshakes using natural languag
 
 `did:midnight:...` represents the decentralized identity (W3C DID) of the counterparty agent. Rohan Protocol acts as the neutral zero-knowledge verification layer; agents retain cryptographic ownership of their identities.
 
-## Developer quickstart: Node.js / TypeScript SDK
+## Developer quickstart: Node.js and TypeScript SDK
 
 Install the core package:
 
@@ -204,36 +204,125 @@ const receipt = await relayer.submitProofStream(proofData, (event) => {
 
 ## Streamable HTTP (NDJSON) lifecycle
 
-The SDK processes chunked transfers from `POST /api/v1/handshake/stream`:
+The SDK processes chunked transfers from `POST /api/v1/handshake/stream`. Each event is delivered as one NDJSON line:
 
-| Stage               | Example NDJSON payload                                                                 | Description                                               |
+### 1. `received`
 
-| `received`          | `{"stage":"received","timestamp":1788903808207}`                                       | Relayer gateway confirms proof ingress                    |
-| `firewall_approved` | `{"stage":"firewall_approved","v01":"passed"}`                                         | Pre-Prover Firewall verifies policy constraints           |
-| `subsidizing_gas`   | `{"stage":"subsidizing_gas","gasPayer":"rohan-relayer-node-01"}`                       | Paymaster sponsors transaction fees ($tDUST)              |
-| `confirmed`         | `{"stage":"confirmed","status":"success","txHash":"0x7c92...","intentHash":"0916..."}` | Transaction is verified and anchored to Midnight Preprod  |
+The relayer gateway confirms proof ingress.
 
-## Hosted Relayer Infrastructure & Access Tiers
+```json
+{"stage":"received","timestamp":1788903808207}
+```
 
-The core ZK proving engine (`@rohan-protocol/sdk`) is 100% open-source and executes locally in client RAM at zero cost. To anchor handshakes on-chain without managing Midnight wallets or $tDUST gas, clients connect to the **Rohan Relayer Gateway**:
+### 2. `firewall_approved`
 
-| Tier           | Monthly Rate | Handshakes / Month | Midnight Gas ($tDUST) | Rate Limit       | Access Model                           |
+The Pre-Prover Firewall verifies policy constraints.
 
-| **Sandbox**    | Free         | 10 / day           | 100% Sponsored        | 1 Req / 10s      | Built-in SDK default (No key required) |
-| **Developer**  | $0           | 500 / month        | 100% Sponsored        | 1 Req / sec      | Free staging key via portal            |
-| **Pro Agent**  | $49 / mo     | 25,000 / month     | 100% Sponsored        | High-speed pool  | Direct access (`rohan_live_...`)       |
-| **Scale**      | $199 / mo    | 125,000 / month    | 100% Sponsored        | Priority pool    | High-throughput agent swarms           |
+```json
+{"stage":"firewall_approved","v01":"passed"}
+```
 
-> **Gas Sponsoring**: Rohan sponsors 100% of L1 network execution fees on Midnight Preprod through an automated paymaster. Get production keys at [rohanprotocol.network](https://rohanprotocol.network).
+### 3. `subsidizing_gas`
+
+The paymaster sponsors the transaction fees in `$tDUST`.
+
+```json
+{"stage":"subsidizing_gas","gasPayer":"rohan-relayer-node-01"}
+```
+
+### 4. `confirmed`
+
+The transaction is verified and anchored to Midnight Preprod.
+
+```json
+{"stage":"confirmed","status":"success","txHash":"0x7c92...","intentHash":"0916..."}
+```
+
+## Hosted relayer infrastructure and access tiers
+
+The core ZK proving engine (`@rohan-protocol/sdk`) is open source and executes locally in client RAM at zero cost. To anchor handshakes on-chain without managing Midnight wallets or `$tDUST` gas, clients connect to the **Rohan Relayer Gateway**.
+
+### Choose your access tier
+
+<table>
+  <thead>
+    <tr>
+      <th>Tier</th>
+      <th>Best for</th>
+      <th>Included usage</th>
+      <th>Rate limit</th>
+      <th>Price</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Sandbox</strong></td>
+      <td>Local evaluation</td>
+      <td>10 handshakes / day</td>
+      <td>1 request / 10 s</td>
+      <td><strong>Free</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Developer</strong></td>
+      <td>Staging and development</td>
+      <td>500 handshakes / month</td>
+      <td>1 request / second</td>
+      <td><strong>$0</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Pro Agent</strong></td>
+      <td>Production agents</td>
+      <td>25,000 handshakes / month</td>
+      <td>High-speed pool</td>
+      <td><strong>$49 / month</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Scale</strong></td>
+      <td>High-throughput swarms</td>
+      <td>125,000 handshakes / month</td>
+      <td>Priority pool</td>
+      <td><strong>$199 / month</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+### Access and gas sponsorship
+
+- **Sandbox:** Built into the SDK; no API key required.
+- **Developer:** Free staging key issued through the portal.
+- **Pro Agent:** Direct production access with a `rohan_live_...` key.
+- **Scale:** Priority access for high-throughput agent swarms.
+- **Gas:** Every tier receives 100% sponsored Midnight execution fees (`$tDUST`) through the automated paymaster.
+
+Get production access at [rohanprotocol.network](https://rohanprotocol.network).
 
 ## Formal threat and mitigation register
 
-| ID | Target layer | Threat vector | Technical impact | Protocol mitigation |
-| --- | --- | --- | --- | --- |
-| V-01 | Semantic / MCP layer | Indirect prompt injection (M2M) | Unauthorized proof generation | Pre-Prover Semantic Firewall with TF-IDF intent sharding and declarative JSON guardrails in `@rohan-protocol/mcp` |
-| V-02 | WASM runtime heap | Serverless / client heap scraping | Plaintext witness (`w`) extraction | Deterministic zeroization: buffers are overwritten with null bytes (`0x00`) after proof synthesis |
-| V-03 | Relayer / Paymaster | Gas station exhaustion / DDoS | Depletion of relayer gas | Rate-limited API gateway with ephemeral API-key verification before sponsorship |
-| V-07 | Browser DOM / WebMCP | Client-side prompt injection | Tool spoofing and session theft | DOM sanitizer strips zero-width Unicode (`[\u200B-\u200D\uFEFF]`) and proving runs inside thread-isolated WebWorkers |
+Rohan maps each major attack surface to a dedicated protocol mitigation:
+
+### V-01 — Semantic / MCP layer
+
+- **Threat:** Indirect prompt injection.
+- **Impact:** Unauthorized proof generation.
+- **Mitigation:** TF-IDF intent routing and declarative JSON guardrails in `@rohan-protocol/mcp`.
+
+### V-02 — WASM runtime heap
+
+- **Threat:** Heap scraping in shared or serverless processes.
+- **Impact:** Plaintext witness (`w`) extraction.
+- **Mitigation:** Rust `zeroize` overwrites sensitive buffers with `0x00` after proof synthesis.
+
+### V-03 — Relayer / Paymaster
+
+- **Threat:** Gas exhaustion or denial-of-service attacks.
+- **Impact:** Relayer balance depletion.
+- **Mitigation:** Rate-limited gateway with ephemeral API-key verification before sponsorship.
+
+### V-07 — Browser DOM / WebMCP
+
+- **Threat:** Client-side prompt injection.
+- **Impact:** Tool spoofing and session theft.
+- **Mitigation:** Zero-width Unicode sanitization and proving inside isolated WebWorkers.
 
 ## Live settlement infrastructure
 
