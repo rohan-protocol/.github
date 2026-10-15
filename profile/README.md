@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ Rohan Protocol
+#  Rohan Protocol
 
 ### Official Model Context Protocol (MCP) Server & Security Gateway
 
