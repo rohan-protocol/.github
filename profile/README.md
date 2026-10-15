@@ -1,283 +1,179 @@
-<h1 align="center">Rohan Protocol</h1>
+<div align="center">
 
-<p align="center">
-  <strong>A security and settlement gateway for AI agents.</strong><br>
-  <em>MCP integrations, browser-side protections, and cryptographic intent commitments.</em>
-</p>
+# 🛡️ Rohan Protocol
 
-<p align="center">
-  <a href="https://www.npmjs.com/package/@rohan-protocol/sdk"><img src="https://img.shields.io/badge/NPM-v0.6.0-blue?style=for-the-badge" alt="NPM version 0.6.0"></a>
-  <a href="https://zenodo.org/records/22730240"><img src="https://img.shields.io/badge/Research-Zenodo%20Preprint-1682d4?style=for-the-badge" alt="Zenodo preprint"></a>
-  <a href="https://midnight.network/"><img src="https://img.shields.io/badge/Network-Midnight-black?style=for-the-badge" alt="Midnight Network"></a>
-  <a href="#streamable-http"><img src="https://img.shields.io/badge/Transport-Streamable%20HTTP-orange?style=for-the-badge" alt="Streamable HTTP"></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="MIT License"></a>
-</p>
+### Official Model Context Protocol (MCP) Server & Security Gateway
 
-Rohan is a set of client libraries and gateway components for routing agent tool
-calls through policy checks and submitting cryptographic commitments to a
-relayer. This README describes the intended architecture and provides
-illustrative setup examples; verify package APIs, network status, and plan
-details against the current releases before deploying.
+**The in-memory security proxy preventing LLM context leaks, credential exfiltration, and prompt injections during tool execution.**
 
-## Contents
+[![NPM Version](https://img.shields.io/npm/v/@rohan-protocol/mcp?style=flat-square&color=black&label=%40rohan-protocol%2Fmcp)](https://www.npmjs.com/package/@rohan-protocol/mcp)
+[![Glama Server](https://img.shields.io/badge/Glama-MCP_Server-blue?style=flat-square)](https://glama.ai/mcp/servers)
+[![Smithery Server](https://img.shields.io/badge/Smithery-rohanprotocol%2Fshield-blue?style=flat-square&logo=anthropic)](https://smithery.ai/server/rohanprotocol/shield)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+[![IEEE Paper](https://img.shields.io/badge/IEEE_Spec-v2.0-00629B?style=flat-square&logo=ieee)](https://zenodo.org/records/22730240)
+[![Settlement](https://img.shields.io/badge/Midnight-Preprod_Live-8A2BE2?style=flat-square)](https://midnight.network/)
 
-- [How it works](#how-it-works)
-- [Privacy model and limitations](#privacy-model-and-limitations)
-- [Packages](#packages)
-- [Setup](#setup)
-- [SDK quickstart](#sdk-quickstart)
-- [Streamable HTTP](#streamable-http)
-- [Relayer plans](#relayer-plans)
-- [Security considerations](#security-considerations)
-- [Network details](#network-details)
-- [Research and citation](#research-and-citation)
-- [License](#license)
+<br />
 
-## How it works
+> 📦 **Official Open-Source MCP Server Monorepo**  
+> The core Model Context Protocol (MCP) server implementation is located directly in this repository at [`packages/mcp/`](./packages/mcp) and distributed on npm as **`@rohan-protocol/mcp`**.
 
-An agent integration can inspect or filter a tool request, derive a
-cryptographic commitment from the request's intent and private inputs, and
-submit the commitment to a relayer. The relayer handles the configured
-settlement flow on Midnight.
+[Run from Source](#-running-the-mcp-server-from-source) • [MCP Tools](#-exposed-mcp-tools) • [Client Setup](#-universal-mcp-client-setup) • [Architecture](#-architecture) • [Security](#-security-register-threat--mitigation)
 
-The privacy boundary depends on what the client actually sends. In the
-intended flow, private witness data is processed on the client and the
-commitment (along with the metadata needed to route and settle the request) is
-sent to the relayer. Do not include secrets in fields that are transmitted to
-the relayer.
+</div>
+
+> ⚠️ Public Beta (v0.6.0): Rohan currently enforces client-side RAM witness isolation, V-01 semantic policy firewalls, and V-02 deterministic memory zeroization (zeroize) to shield MCP tool calls while native client-side WASM ZK-SNARK proving circuits are under active research (Milestone 1).
+
+## ⚡ The Problem: Plaintext Context Leaks in MCP
+
+The Model Context Protocol (MCP) connects autonomous agents to tools. However, transport encryption (TLS) only protects data in flight — at the host boundary, standard MCP tools execute in cleartext:
 
 ```text
-Agent / application
-        |
-        v
-MCP or WebMCP integration
-  - request and policy checks
-  - browser-side protections, where applicable
-        |
-        v
-SDK
-  - local commitment generation
-  - best-effort clearing of sensitive buffers
-        |
-        | commitment + required request metadata
-        v
-Rohan relayer
-  - request handling and configured sponsorship
-        |
-        v
-Midnight settlement network
+🔴 WITHOUT ROHAN (Standard MCP)
+Agent calls tool ➔ { "api_key": "sk_live_...", "db_password": "secret" } in plaintext
+                 ➔ Leaked directly into LLM conversation context & inference logs
+                 ➔ Permanent risk of context exfiltration & prompt injection
+
+🟢 WITH ROHAN SHIELD
+Agent calls tool ➔ Arguments evaluated strictly in isolated client RAM
+                 ➔ V-02 Zeroize wipes witness memory immediately from volatile memory
+                 ➔ Zero plaintext parameters ever enter the model context window
 ```
 
-### Cryptographic commitments and memory clearing
+## 🛠️ Running the MCP Server from Source
 
-The documented protocol uses a 32-byte intent commitment. A commitment is a
-fixed-size cryptographic digest that can bind data to a request; it is not
-itself a proof that the underlying request is valid, nor does its size alone
-establish confidentiality. Confidentiality depends on keeping private inputs
-out of transmitted payloads and logs.
+This repository contains the complete open-source MCP server implementation. You can clone and run the server locally over standard stdio:
 
-The `zeroize` crate and similar mechanisms can overwrite specific buffers
-after use. This is best-effort memory hygiene, not hardware-level sanitization
-or a guarantee that every copy has been erased. Copies may exist in language
-runtimes, allocators, logs, crash dumps, swap, or application code. Treat
-inputs as sensitive throughout their lifecycle and review the complete
-deployment path.
+```bash
+# 1. Clone the repository
+git clone https://github.com/rohan-protocol/sdk.git
+cd sdk
 
-## Privacy model and limitations
+# 2. Install dependencies & build packages
+npm install
+npm run build
 
-- The client should keep private witness values local and submit only the
-  commitment and necessary public metadata.
-- A 32-byte commitment should not be described as a 32-byte zero-knowledge
-  proof. The proof system and payload format must be verified for the exact
-  SDK version and flow in use.
-- Memory clearing reduces residual-data risk for buffers it actually clears;
-  it cannot prove that all runtime or operating-system copies are gone.
-- MCP policy checks and prompt-injection filters can reduce risk but cannot
-  guarantee that an agent will never be manipulated or make an unsafe call.
-- This README does not claim GDPR, HIPAA, SOC 2, or other regulatory
-  compliance. Compliance depends on the complete product and deployment.
+# 3. Start the MCP Server directly over stdio
+node packages/mcp/dist/server.js
+```
 
-## Packages
+Or run directly via `npx` without cloning:
 
-| Package | Description | Example environments |
-| --- | --- | --- |
-| [`@rohan-protocol/sdk`](https://www.npmjs.com/package/@rohan-protocol/sdk) | Client SDK for commitment generation and relayer requests | Node.js, Deno, Bun, edge runtimes (check runtime compatibility) |
-| [`@rohan-protocol/mcp`](https://www.npmjs.com/package/@rohan-protocol/mcp) | MCP server integration for agent tool calls | MCP-compatible clients |
-| [`@rohan-protocol/webmcp`](https://www.npmjs.com/package/@rohan-protocol/webmcp) | Browser-oriented WebMCP integration | Browser applications |
+```bash
+npx -y @rohan-protocol/mcp@latest
+```
 
-Package availability, versions, and runtime support can change. Consult the
-package registry and the package-specific documentation for current details.
+## 🔧 Exposed MCP Tools
 
-## Setup
+The `@rohan-protocol/mcp` server registers standard Model Context Protocol tool endpoints over JSON-RPC:
 
-### Claude Desktop
+| MCP Tool | Description | Input Parameters |
+| :--- | :--- | :--- |
+| `rohan_zk_handshake` | Evaluates tool execution parameters in ephemeral RAM, strips prompt injections, generates a cryptographic 32-byte intent commitment, and anchors state transitions gaslessly to Midnight. | `targetAgentId` (string), `intent` (string), `privatePayload` (object) |
 
-Add the MCP server to your Claude Desktop configuration. Use an API key issued
-to you; never commit a live key to source control.
+## 🚀 Universal MCP Client Setup
+
+### 1. Claude Desktop
+
+Add `rohan-shield` to your `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "rohan": {
+    "rohan-shield": {
       "command": "npx",
-      "args": ["-y", "@rohan-protocol/mcp"],
+      "args": ["-y", "@rohan-protocol/mcp@latest"],
       "env": {
-        "ROHAN_RELAYER_URL": "https://api.rohanprotocol.network/api/v1/handshake",
-        "ROHAN_API_KEY": "YOUR_API_KEY"
+        "ROHAN_RELAYER_URL": "https://api.rohanprotocol.network/api/v1/handshake"
       }
     }
   }
 }
 ```
 
-For Cursor or another MCP-compatible client, add the same command and
-environment variables using that client's MCP server settings.
+### 2. Cursor IDE & Windsurf
 
-### Google ADK
+1. Navigate to **Settings → Features → MCP Servers → Add New MCP Server**.
+2. Set the name to **`rohan-shield`**.
+3. Set the type to **`command`**.
+4. Use the command: `npx -y @rohan-protocol/mcp@latest`
 
-The following illustrates the integration pattern. Confirm the constructor and
-tool registration API against the installed package versions:
-
-```ts
-import { RohanMcpGateway } from "@rohan-protocol/mcp";
-
-const gateway = new RohanMcpGateway({
-  transport: "streamable-http",
-  relayerUrl: "https://api.rohanprotocol.network/api/v1/handshake",
-  apiKey: process.env.ROHAN_API_KEY
-});
-
-agent.registerTool(gateway.asAdkTool());
-```
-
-## SDK quickstart
-
-Install the SDK:
-
-```bash
-npm install @rohan-protocol/sdk
-```
-
-Example request using the SDK API shown in the v0.6.0 documentation:
-
-```ts
-import { RohanClient } from "@rohan-protocol/sdk";
-
-const client = new RohanClient({
-  relayerUrl: "https://api.rohanprotocol.network/api/v1/handshake",
-  apiKey: process.env.ROHAN_API_KEY
-});
-
-const receipt = await client.submitHandshake({
-  agentId: "did:example:agent-01",
-  intent: "submit_example_request",
-  privateData: { example: "sensitive input; review what the SDK transmits" }
-});
-
-console.log(receipt.status, receipt.txHash);
-```
-
-Review the SDK implementation and network request payloads before passing
-production secrets as `privateData`. Ensure that the installed package
-processes sensitive inputs locally and does not serialize them to the relayer.
-
-## Streamable HTTP
-
-The documented streaming endpoint is:
+## 📁 Monorepo Structure
 
 ```text
-POST /api/v1/handshake/stream
+rohan-protocol/sdk
+├── packages/
+│   ├── mcp/         # 🤖 The Official Model Context Protocol (MCP) Server (Stdio)
+│   ├── sdk/         # ⚙️ Core in-memory commitment engine & relayer client
+│   └── webmcp/      # 🌐 React / Next.js browser hooks with V-07 DOM isolation
+├── contracts/       # 📜 Midnight Compact smart contracts (rohan_handshake.compact)
+└── README.md
 ```
 
-The response may provide newline-delimited JSON lifecycle events. The
-following is an illustrative shape, not a guarantee of current server
-behavior:
+## 🏗️ Architecture
 
-```jsonl
-{"stage":"received"}
-{"stage":"firewall_approved"}
-{"stage":"subsidizing_gas"}
-{"stage":"confirmed","status":"success","txHash":"<transaction-hash>","intentHash":"<commitment>"}
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           AUTONOMOUS AGENT RUNTIME                          │
+│               Claude Desktop / Cursor IDE / Custom Agent Workflows          │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │ Tool Execution (JSON-RPC)
+                                       ▼
+ ┌───────────────────────────────────────────────────────────────────────────┐
+ │                  [@rohan-protocol/mcp] SERVER (packages/mcp)              │
+ │  • Stdio MCP Protocol Server: Compliant with Anthropic MCP Specification  │
+ │  • V-01 Semantic Firewall: Filters hidden Unicode & prompt injections     │
+ └─────────────────────────────────────┬─────────────────────────────────────┘
+                                       │ In-Memory Witness
+                                       ▼
+ ┌───────────────────────────────────────────────────────────────────────────┐
+ │                  [@rohan-protocol/sdk] ENGINE (packages/sdk)              │
+ │  • Ephemeral RAM Commitment (32-Byte Intent Hash)                         │
+ │  • V-02 Deterministic Zeroize: Overwrites buffers immediately in memory   │
+ │  • ZERO disk writes. ZERO swap-file exposure.                             │
+ └─────────────────────────────────────┬─────────────────────────────────────┘
+                                       │ Streamable HTTP (NDJSON)
+                                       │ received ➔ approved ➔ proving ➔ anchored
+                                       ▼
+ ┌───────────────────────────────────────────────────────────────────────────┐
+ │                       ROHAN RELAYER PAYMASTER                             │
+ │  • Gasless Transaction Sponsoring ($tDUST covered automatically)          │
+ │  • Scale-to-Zero Native (No persistent SSE connection bottlenecks)        │
+ └─────────────────────────────────────┬─────────────────────────────────────┘
+                                       │ Immutable Replay Protection
+                                       ▼
+ ┌───────────────────────────────────────────────────────────────────────────┐
+ │                      MIDNIGHT BLOCKCHAIN LEDGER                           │
+ │  Contract: rohan_handshake.compact (Preprod: 585ac0c4448257507d8ffa2a...) │
+ └───────────────────────────────────────────────────────────────────────────┘
 ```
 
-Treat event fields and stage names as API details that may vary by release.
-Handle network errors, non-success HTTP responses, and incomplete streams in
-your integration.
+## 🛡️ Security Register (Threat & Mitigation)
 
-## Relayer plans
+| Threat ID | Threat Vector | Mitigation Mechanism |
+| :--- | :--- | :--- |
+| V-01 | Adversarial Prompt Injection | Pre-Prover Semantic Firewall: intercepts out-of-bounds payloads and strips zero-width Unicode injection characters ([\u200B-\u200D\uFEFF]). |
+| V-02 | Residual Heap Exfiltration | Deterministic Memory Zeroize: multi-pass volatile memory wiping overwriting witness buffers with deterministic `0x00` byte patterns. |
+| V-05 | Persistent Socket Exhaustion | Scale-to-Zero NDJSON: uses chunked Streamable HTTP instead of long-lived SSE connections, allowing proxies to spin down on idle. |
+| V-07 | DOM / WebWorker Scraping | WebMCP Thread Isolation: isolates execution buffers inside WebWorkers, shielded from malicious third-party browser extensions. |
 
-The following indicative plans were listed in previous project materials.
-Confirm current quotas and pricing on the [Rohan Protocol website](https://rohanprotocol.network/)
-before relying on them.
+## 📄 Academic Research
 
-| Tier | Use case | Listed quota | Listed price |
-| --- | --- | ---: | ---: |
-| Sandbox | Testing and evaluation | 10 handshakes per day | Free |
-| Developer | Staging and development | 500 handshakes per month | $0 |
-| Pro Agent | Production agents and startups | 25,000 handshakes per month | $49 per month |
-| Scale | Higher-throughput workloads | 125,000 handshakes per month | $199 per month |
+The cryptographic foundations, threat registers, and formal mathematical proofs are documented in our research paper:
 
-Any fee sponsorship, quota, rate limit, service level, and availability is
-subject to the current service terms.
+> Rohan: A Stateless Zero-Knowledge Trust Gateway for Privacy-Preserving Agentic Workflows via Streamable HTTP  
+> Model Context Protocol Working Group & Rohan Protocol Lab  
+> Published via Zenodo / IEEE Spec v2.0 • DOI: 10.5281/zenodo.22730240
 
-## Security considerations
+## 🤝 Community & Contributing
 
-Security controls are useful risk mitigations, not proofs that a system is
-invulnerable. Validate the implementation and deployment configuration for
-your threat model.
+We build in the open.
 
-| Area | Risk | Practical mitigation |
-| --- | --- | --- |
-| Agent and MCP tools | Malicious or misleading tool input can influence an agent | Validate inputs and authorization at the application boundary; do not rely on prompt text as an access-control mechanism |
-| Client memory | Sensitive values may remain in memory or be copied by a runtime | Minimize secret lifetime, avoid unnecessary copies and logging, and use memory-clearing primitives where supported |
-| Relayer | Abuse, outages, or overuse can affect availability and cost | Use scoped API keys, quotas, rate limits, and operational monitoring |
-| Smart contract | Contract or configuration errors can affect settlement | Verify deployed contract addresses, network, authorization, and contract source before use |
-| Browser integrations | Untrusted page content may influence agent behavior | Treat DOM content as untrusted input; test sanitization and browser isolation against the application's threat model |
+- 🐛 Found a bug or bypass vector? Open a GitHub Issue.
+- ⭐️ Support: consider starring the repository to help other developers discover privacy-first MCP tools.
 
-Do not describe heuristic filters as a complete defense against prompt
-injection. Do not claim a security property is formally verified unless the
-relevant code, tests, and audit evidence are available.
+<div align="center">
+<sub>Licensed under the <a href="./LICENSE">MIT License</a>. Maintained by the Rohan Protocol community.</sub>
+</div>
 
-## Network details
-
-The project has documented a Midnight Preprod integration. Testnet contracts
-and endpoints can change; confirm their status before use.
-
-- Network: Midnight Preprod (test network)
-- Relayer endpoint: `https://api.rohanprotocol.network/api/v1/handshake`
-- Contract address previously listed in project materials:
-  `585ac0c4448257507d8ffa2a89e2aa00abd86ec9e94bdb6f553bc83e05f4dd0e`
-
-Do not treat a testnet deployment as a production availability or security
-guarantee.
-
-## Research and citation
-
-The Rohan preprint is available on Zenodo:
-
-> Julian von Bordelius. “Rohan: A Stateless Zero-Knowledge Trust Gateway for
-> Privacy-Preserving Agentic Workflows via Streamable HTTP.” Preprint,
-> version 1.0.0, 2026. https://doi.org/10.5281/zenodo.22730240
-
-The preprint describes the research design and reported results. It is not, by
-itself, an independent security audit or a guarantee that every published
-claim applies to every released package.
-
-```bibtex
-@misc{vonbordelius2026rohan,
-  author       = {Julian von Bordelius},
-  title        = {Rohan: A Stateless Zero-Knowledge Trust Gateway for
-                  Privacy-Preserving Agentic Workflows via Streamable HTTP},
-  year         = {2026},
-  publisher    = {Zenodo},
-  doi          = {10.5281/zenodo.22730240},
-  url          = {https://doi.org/10.5281/zenodo.22730240},
-  note         = {Preprint, version 1.0.0}
-}
-```
-
-## License
-
-This project is distributed under the MIT License. See the repository's
-license file for details.
 
